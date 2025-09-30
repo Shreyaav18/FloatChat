@@ -1,18 +1,6 @@
-"""
-ARGO Float Data Explorer - Streamlit Application
-AI-Powered Oceanographic Data Analysis System
-
-Installation:
-pip install streamlit pandas numpy plotly
-
-Run:
-streamlit run app.py
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
 
@@ -52,7 +40,6 @@ if 'chat_history' not in st.session_state:
 # Mock data generator
 @st.cache_data
 def generate_mock_argo_data():
-    """Generate sample ARGO float data"""
     floats = pd.DataFrame({
         'float_id': ['WMO2902756', 'WMO2902757', 'WMO2902758', 'WMO2902759', 'WMO2902760'],
         'latitude': [8.5, 10.1, 12.3, 6.8, 15.2],
@@ -76,7 +63,6 @@ def generate_mock_argo_data():
     return floats, profiles
 
 def process_nl_query(query):
-    """Simple natural language query processor"""
     query_lower = query.lower()
     
     if 'temperature' in query_lower or 'temp' in query_lower:
@@ -105,48 +91,26 @@ def process_nl_query(query):
             'viz_type': None
         }
 
+# Plot functions using plotly.express
 def plot_temperature_profile(profiles_df):
-    """Create temperature depth profile"""
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=profiles_df['temperature'],
-        y=-profiles_df['depth'],
-        mode='lines+markers',
-        name='Temperature',
-        line=dict(color='#e74c3c', width=3),
-        marker=dict(size=8)
-    ))
-    fig.update_layout(
-        title='Temperature Profile',
-        xaxis_title='Temperature (°C)',
-        yaxis_title='Depth (m)',
-        hovermode='closest',
-        height=500
-    )
-    return fig
+    return px.line(
+        profiles_df,
+        x='temperature',
+        y='depth',
+        labels={'temperature': 'Temperature (°C)', 'depth': 'Depth (m)'},
+        title='Temperature Profile'
+    ).update_yaxes(autorange="reversed")
 
 def plot_salinity_profile(profiles_df):
-    """Create salinity depth profile"""
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=profiles_df['salinity'],
-        y=-profiles_df['depth'],
-        mode='lines+markers',
-        name='Salinity',
-        line=dict(color='#3498db', width=3),
-        marker=dict(size=8)
-    ))
-    fig.update_layout(
-        title='Salinity Profile',
-        xaxis_title='Salinity (PSU)',
-        yaxis_title='Depth (m)',
-        hovermode='closest',
-        height=500
-    )
-    return fig
+    return px.line(
+        profiles_df,
+        x='salinity',
+        y='depth',
+        labels={'salinity': 'Salinity (PSU)', 'depth': 'Depth (m)'},
+        title='Salinity Profile'
+    ).update_yaxes(autorange="reversed")
 
 def plot_float_map(floats_df):
-    """Create map of ARGO float locations"""
     fig = px.scatter_mapbox(
         floats_df,
         lat='latitude',
@@ -158,36 +122,21 @@ def plot_float_map(floats_df):
         zoom=4,
         height=500
     )
-    fig.update_layout(
-        mapbox_style="open-street-map",
-        margin={"r": 0, "t": 0, "l": 0, "b": 0}
-    )
+    fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
     return fig
 
 def plot_ts_diagram(profiles_df):
-    """Create T-S diagram"""
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=profiles_df['salinity'],
-        y=profiles_df['temperature'],
-        mode='lines+markers',
-        marker=dict(
-            size=10,
-            color=profiles_df['depth'],
-            colorscale='Viridis',
-            colorbar=dict(title="Depth (m)"),
-            showscale=True
-        ),
-        text=[f"Depth: {d}m" for d in profiles_df['depth']],
-        hovertemplate='Salinity: %{x:.2f}<br>Temperature: %{y:.2f}<br>%{text}<extra></extra>'
-    ))
-    fig.update_layout(
-        title='Temperature-Salinity Diagram',
-        xaxis_title='Salinity (PSU)',
-        yaxis_title='Temperature (°C)',
-        height=500
+    # Convert T-S diagram to px.scatter
+    return px.scatter(
+        profiles_df,
+        x='salinity',
+        y='temperature',
+        color='depth',
+        color_continuous_scale='Viridis',
+        labels={'salinity': 'Salinity (PSU)', 'temperature': 'Temperature (°C)', 'depth': 'Depth (m)'},
+        hover_data=['depth'],
+        title='Temperature-Salinity Diagram'
     )
-    return fig
 
 # Main header
 st.markdown('<div class="main-header">🌊 FloatChat- AI Conversational Ocean Data Assistant</div>', unsafe_allow_html=True)
@@ -201,43 +150,25 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     
     st.subheader("Data Source")
-    data_source = st.selectbox(
-        "Select Region",
-        ["Indian Ocean", "Arabian Sea", "Bay of Bengal", "Global"]
-    )
+    data_source = st.selectbox("Select Region", ["Indian Ocean", "Arabian Sea", "Bay of Bengal", "Global"])
     
     st.subheader("Date Range")
-    date_range = st.date_input(
-        "Select date range",
-        value=(datetime.now() - timedelta(days=180), datetime.now()),
-        max_value=datetime.now()
-    )
+    date_range = st.date_input("Select date range", value=(datetime.now() - timedelta(days=180), datetime.now()), max_value=datetime.now())
     
     st.subheader("Parameters")
-    params = st.multiselect(
-        "Select parameters",
-        ["Temperature", "Salinity", "Pressure", "Oxygen", "Chlorophyll"],
-        default=["Temperature", "Salinity"]
-    )
+    params = st.multiselect("Select parameters", ["Temperature", "Salinity", "Pressure", "Oxygen", "Chlorophyll"], default=["Temperature", "Salinity"])
     
     st.divider()
     
     st.subheader("📊 Quick Stats")
     col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Active Floats", len(floats_df[floats_df['status'] == 'active']))
-    with col2:
-        st.metric("Total Profiles", int(floats_df['profiles_count'].sum()))
+    col1.metric("Active Floats", len(floats_df[floats_df['status'] == 'active']))
+    col2.metric("Total Profiles", int(floats_df['profiles_count'].sum()))
     
     st.divider()
     
     st.subheader("🔍 Query Examples")
-    examples = [
-        "Show temperature profiles",
-        "Find floats near equator",
-        "Compare salinity data",
-        "Map active floats"
-    ]
+    examples = ["Show temperature profiles", "Find floats near equator", "Compare salinity data", "Map active floats"]
     for example in examples:
         if st.button(example, key=example, use_container_width=True):
             st.session_state.chat_history.append({"role": "user", "content": example})
@@ -250,12 +181,9 @@ tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat Interface", "🗺️ Float Map", "�
 
 with tab1:
     st.header("AI Assistant")
-    
-    chat_container = st.container(height=400)
-    with chat_container:
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
     
     user_input = st.chat_input("Ask about ARGO data...")
     if user_input:
@@ -267,71 +195,45 @@ with tab1:
 with tab2:
     st.header("ARGO Float Locations")
     st.plotly_chart(plot_float_map(floats_df), use_container_width=True)
-    
     st.subheader("Float Details")
     st.dataframe(floats_df, use_container_width=True, hide_index=True)
 
 with tab3:
     st.header("Oceanographic Profiles")
-    
     col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Temperature Profile")
-        st.plotly_chart(plot_temperature_profile(profiles_df), use_container_width=True)
+    col1.subheader("Temperature Profile")
+    col1.plotly_chart(plot_temperature_profile(profiles_df), use_container_width=True)
     
-    with col2:
-        st.subheader("Salinity Profile")
-        st.plotly_chart(plot_salinity_profile(profiles_df), use_container_width=True)
+    col2.subheader("Salinity Profile")
+    col2.plotly_chart(plot_salinity_profile(profiles_df), use_container_width=True)
     
     st.subheader("T-S Diagram")
     st.plotly_chart(plot_ts_diagram(profiles_df), use_container_width=True)
     
     st.subheader("📥 Export Data")
     col1, col2 = st.columns(2)
-    with col1:
-        csv = profiles_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download CSV", csv, "argo_profiles.csv", "text/csv")
-    with col2:
-        json_str = profiles_df.to_json(orient='records')
-        st.download_button("Download JSON", json_str, "argo_profiles.json", "application/json")
+    col1.download_button("Download CSV", profiles_df.to_csv(index=False).encode('utf-8'), "argo_profiles.csv", "text/csv")
+    col2.download_button("Download JSON", profiles_df.to_json(orient='records'), "argo_profiles.json", "application/json")
 
 with tab4:
     st.header("Analytics Dashboard")
-    
     col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Floats", len(floats_df))
-    with col2:
-        st.metric("Avg Temperature", f"{profiles_df['temperature'].mean():.1f}°C")
-    with col3:
-        st.metric("Avg Salinity", f"{profiles_df['salinity'].mean():.2f} PSU")
-    with col4:
-        st.metric("Max Depth", f"{profiles_df['depth'].max():.0f}m")
+    col1.metric("Total Floats", len(floats_df))
+    col2.metric("Avg Temperature", f"{profiles_df['temperature'].mean():.1f}°C")
+    col3.metric("Avg Salinity", f"{profiles_df['salinity'].mean():.2f} PSU")
+    col4.metric("Max Depth", f"{profiles_df['depth'].max():.0f}m")
     
     st.divider()
     
     col1, col2 = st.columns(2)
+    col1.subheader("Float Status Distribution")
+    status_counts = floats_df['status'].value_counts()
+    fig = px.pie(values=status_counts.values, names=status_counts.index, color_discrete_sequence=['#27ae60', '#95a5a6'])
+    col1.plotly_chart(fig, use_container_width=True)
     
-    with col1:
-        st.subheader("Float Status Distribution")
-        status_counts = floats_df['status'].value_counts()
-        fig = px.pie(
-            values=status_counts.values, 
-            names=status_counts.index,
-            color_discrete_sequence=['#27ae60', '#95a5a6']
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Profiles per Float")
-        fig = px.bar(
-            floats_df, 
-            x='float_id', 
-            y='profiles_count',
-            color='status',
-            color_discrete_map={'active': '#3498db', 'inactive': '#95a5a6'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    col2.subheader("Profiles per Float")
+    fig = px.bar(floats_df, x='float_id', y='profiles_count', color='status', color_discrete_map={'active': '#3498db', 'inactive': '#95a5a6'})
+    col2.plotly_chart(fig, use_container_width=True)
 
 # Footer
 st.divider()
