@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 from datetime import datetime, timedelta
 
 # Page configuration
@@ -66,77 +65,15 @@ def process_nl_query(query):
     query_lower = query.lower()
     
     if 'temperature' in query_lower or 'temp' in query_lower:
-        return {
-            'text': "Temperature profile from ARGO float WMO2902756 shows tropical ocean stratification with warm surface waters decreasing to cold deep waters.",
-            'viz_type': 'temperature'
-        }
+        return {"text": "Temperature profile data available.", 'viz_type': 'temperature'}
     elif 'salinity' in query_lower:
-        return {
-            'text': "Salinity profile shows subsurface maximum around 200m depth, characteristic of Arabian Sea water masses.",
-            'viz_type': 'salinity'
-        }
+        return {"text": "Salinity profile data available.", 'viz_type': 'salinity'}
     elif 'float' in query_lower or 'location' in query_lower or 'map' in query_lower:
-        return {
-            'text': "Found 5 ARGO floats in the Indian Ocean region. Active floats are shown on the map.",
-            'viz_type': 'map'
-        }
+        return {"text": "Float location data available.", 'viz_type': 'map'}
     elif 'compare' in query_lower or 'ts' in query_lower:
-        return {
-            'text': "T-S diagram comparing temperature and salinity helps identify different water masses.",
-            'viz_type': 'compare'
-        }
+        return {"text": "T-S comparison data available.", 'viz_type': 'compare'}
     else:
-        return {
-            'text': "Try asking: Show temperature profiles, Find floats near coordinates, or Compare salinity data.",
-            'viz_type': None
-        }
-
-# Plot functions using plotly.express
-def plot_temperature_profile(profiles_df):
-    return px.line(
-        profiles_df,
-        x='temperature',
-        y='depth',
-        labels={'temperature': 'Temperature (°C)', 'depth': 'Depth (m)'},
-        title='Temperature Profile'
-    ).update_yaxes(autorange="reversed")
-
-def plot_salinity_profile(profiles_df):
-    return px.line(
-        profiles_df,
-        x='salinity',
-        y='depth',
-        labels={'salinity': 'Salinity (PSU)', 'depth': 'Depth (m)'},
-        title='Salinity Profile'
-    ).update_yaxes(autorange="reversed")
-
-def plot_float_map(floats_df):
-    fig = px.scatter_mapbox(
-        floats_df,
-        lat='latitude',
-        lon='longitude',
-        hover_name='float_id',
-        hover_data=['status', 'profiles_count'],
-        color='status',
-        color_discrete_map={'active': '#27ae60', 'inactive': '#95a5a6'},
-        zoom=4,
-        height=500
-    )
-    fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
-    return fig
-
-def plot_ts_diagram(profiles_df):
-    # Convert T-S diagram to px.scatter
-    return px.scatter(
-        profiles_df,
-        x='salinity',
-        y='temperature',
-        color='depth',
-        color_continuous_scale='Viridis',
-        labels={'salinity': 'Salinity (PSU)', 'temperature': 'Temperature (°C)', 'depth': 'Depth (m)'},
-        hover_data=['depth'],
-        title='Temperature-Salinity Diagram'
-    )
+        return {"text": "Try asking: Show temperature profiles, Find floats near coordinates, or Compare salinity data.", 'viz_type': None}
 
 # Main header
 st.markdown('<div class="main-header">🌊 FloatChat- AI Conversational Ocean Data Assistant</div>', unsafe_allow_html=True)
@@ -148,7 +85,6 @@ floats_df, profiles_df = generate_mock_argo_data()
 # Sidebar configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
-    
     st.subheader("Data Source")
     data_source = st.selectbox("Select Region", ["Indian Ocean", "Arabian Sea", "Bay of Bengal", "Global"])
     
@@ -177,7 +113,7 @@ with st.sidebar:
             st.rerun()
 
 # Main tabs
-tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat Interface", "🗺️ Float Map", "📈 Profiles", "📊 Dashboard"])
+tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat Interface", "🗺️ Float Data", "📈 Profiles", "📊 Dashboard"])
 
 with tab1:
     st.header("AI Assistant")
@@ -193,22 +129,14 @@ with tab1:
         st.rerun()
 
 with tab2:
-    st.header("ARGO Float Locations")
-    st.plotly_chart(plot_float_map(floats_df), use_container_width=True)
+    st.header("ARGO Float Data")
     st.subheader("Float Details")
     st.dataframe(floats_df, use_container_width=True, hide_index=True)
 
 with tab3:
     st.header("Oceanographic Profiles")
-    col1, col2 = st.columns(2)
-    col1.subheader("Temperature Profile")
-    col1.plotly_chart(plot_temperature_profile(profiles_df), use_container_width=True)
-    
-    col2.subheader("Salinity Profile")
-    col2.plotly_chart(plot_salinity_profile(profiles_df), use_container_width=True)
-    
-    st.subheader("T-S Diagram")
-    st.plotly_chart(plot_ts_diagram(profiles_df), use_container_width=True)
+    st.subheader("Temperature & Salinity Data")
+    st.dataframe(profiles_df, use_container_width=True)
     
     st.subheader("📥 Export Data")
     col1, col2 = st.columns(2)
@@ -222,24 +150,12 @@ with tab4:
     col2.metric("Avg Temperature", f"{profiles_df['temperature'].mean():.1f}°C")
     col3.metric("Avg Salinity", f"{profiles_df['salinity'].mean():.2f} PSU")
     col4.metric("Max Depth", f"{profiles_df['depth'].max():.0f}m")
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    col1.subheader("Float Status Distribution")
-    status_counts = floats_df['status'].value_counts()
-    fig = px.pie(values=status_counts.values, names=status_counts.index, color_discrete_sequence=['#27ae60', '#95a5a6'])
-    col1.plotly_chart(fig, use_container_width=True)
-    
-    col2.subheader("Profiles per Float")
-    fig = px.bar(floats_df, x='float_id', y='profiles_count', color='status', color_discrete_map={'active': '#3498db', 'inactive': '#95a5a6'})
-    col2.plotly_chart(fig, use_container_width=True)
 
 # Footer
 st.divider()
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 1rem;'>
-    <p><strong>Floatchat- AI Conversational Ocean Data Assistant</strong> | Powered by AI & RAG</p>
-    <p style='font-size: 0.9rem;'>Built with Streamlit, Plotly, and LLM Integration</p>
+    <p><strong>Floatchat- AI Conversational Ocean Data Assistant</strong></p>
+    <p style='font-size: 0.9rem;'>Built with Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
